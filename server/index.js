@@ -11,7 +11,7 @@ if(!ADMIN_PASSWORD||ADMIN_PASSWORD.length<16||!SESSION_SECRET||SESSION_SECRET.le
 const db=new Database(path.join(root,'illume.sqlite'));
 db.pragma('journal_mode = WAL');
 db.exec(`CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,category TEXT NOT NULL,price_cents INTEGER NOT NULL CHECK(price_cents>=0),stock INTEGER NOT NULL CHECK(stock>=0),image TEXT NOT NULL DEFAULT '',active INTEGER NOT NULL DEFAULT 1,created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY AUTOINCREMENT,status TEXT NOT NULL DEFAULT 'rascunho',items_json TEXT NOT NULL,total_cents INTEGER NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-const app=express();app.disable('x-powered-by');app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'32kb'}));
+const app=express();app.set('trust proxy', 1);app.disable('x-powered-by');app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'32kb'}));
 const secure=NODE_ENV==='production';const sessions=new Map();
 const sign=t=>createHmac('sha256',SESSION_SECRET).update(t).digest('hex');
 function auth(req,res,next){const cookie=(req.headers.cookie||'').split('; ').find(x=>x.startsWith('illume_session='))?.split('=')[1];if(!cookie)return res.status(401).json({error:'Acesso não autorizado'});const [id,sig]=cookie.split('.');if(!id||!sig||sig.length!==64||!timingSafeEqual(Buffer.from(sign(id)),Buffer.from(sig))||!sessions.has(id)||sessions.get(id)<Date.now())return res.status(401).json({error:'Sessão inválida'});next()}
